@@ -247,7 +247,7 @@
   </div>
 
   <script>
-    // 1. Production Injection Placeholders (For GitHub Deployment Engine)
+    // 1. Production Injection Placeholders
     const secretConfig = {
       apiKey: "__FIREBASE_API_KEY__",
       authDomain: "__FIREBASE_AUTH_DOMAIN__",
@@ -259,7 +259,7 @@
       measurementId: "__FIREBASE_MEASUREMENT_ID__"
     };
 
-    // 2. Direct Fallback Configuration (Used instantly during active local/preview testing)
+    // 2. Direct Fallback Configuration
     const localConfig = {
       apiKey: "AIzaSyBc7te9teUuhfI7fI9AbGjEPbR8r43HIQ0",
       authDomain: "celestial-tracking.firebaseapp.com",
@@ -271,61 +271,91 @@
       measurementId: "G-5W556CWNZ5"
     };
 
-    // Determine if the environment has processed Github Actions replacements yet
     const isDeployed = !secretConfig.apiKey.includes("__FIREBASE_");
     const firebaseConfig = isDeployed ? secretConfig : localConfig;
 
-    // Initialize Connection Framework
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const messagesRef = db.ref('community_chat');
-
-    let anonymousUser = localStorage.getItem('chat_username');
-    if (!anonymousUser) {
-      anonymousUser = "Observer-" + Math.floor(1000 + Math.random() * 9000);
-      localStorage.setItem('chat_username', anonymousUser);
+    // Diagnostic helper to print errors right on the screen
+    function showDiagnosticError(errMessage, type = "error") {
+      const header = document.querySelector('.chat-header');
+      let statusDiv = document.getElementById('diagnostic-status');
+      if (!statusDiv) {
+        statusDiv = document.createElement('p');
+        statusDiv.id = 'diagnostic-status';
+        statusDiv.style.marginTop = '8px';
+        statusDiv.style.padding = '8px';
+        statusDiv.style.borderRadius = '6px';
+        statusDiv.style.fontSize = '0.85em';
+        statusDiv.style.fontWeight = 'bold';
+        header.appendChild(statusDiv);
+      }
+      statusDiv.textContent = `⚠️ System Status: ${errMessage}`;
+      statusDiv.style.background = type === "error" ? "#ff006e" : "#4caf50";
+      statusDiv.style.color = "#fff";
     }
 
-    const messagesBox = document.getElementById('messagesBox');
-    const messageInput = document.getElementById('messageInput');
-    const sendBtn = document.getElementById('sendBtn');
+    try {
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+      const messagesRef = db.ref('community_chat');
 
-    function handleTransmission() {
-      const text = messageInput.value.trim();
-      if (!text) return;
+      let anonymousUser = localStorage.getItem('chat_username');
+      if (!anonymousUser) {
+        anonymousUser = "Observer-" + Math.floor(1000 + Math.random() * 9000);
+        localStorage.setItem('chat_username', anonymousUser);
+      }
 
-      messagesRef.push({
-        username: anonymousUser,
-        message: text,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-      }).then(() => {
-        console.log("Transmission delivered successfully.");
-      }).catch((error) => {
-        console.error("Transmission fault:", error);
+      const messagesBox = document.getElementById('messagesBox');
+      const messageInput = document.getElementById('messageInput');
+      const sendBtn = document.getElementById('sendBtn');
+
+      function handleTransmission() {
+        const text = messageInput.value.trim();
+        if (!text) return;
+
+        showDiagnosticError("Attempting data transmission...", "info");
+
+        messagesRef.push({
+          username: anonymousUser,
+          message: text,
+          timestamp: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+          showDiagnosticError("Transmission successful!", "success");
+          setTimeout(() => {
+            const statusDiv = document.getElementById('diagnostic-status');
+            if(statusDiv) statusDiv.remove();
+          }, 3000);
+        }).catch((error) => {
+          // This will capture things like PERMISSION_DENIED
+          showDiagnosticError(`Database Rejected: ${error.message}`);
+        });
+
+        messageInput.value = "";
+      }
+
+      sendBtn.addEventListener('click', handleTransmission);
+      messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleTransmission(); });
+
+      messagesRef.on('child_added', (snapshot) => {
+        const data = snapshot.val();
+        const msgDiv = document.createElement('div');
+        
+        const isOurMessage = data.username === anonymousUser;
+        msgDiv.className = `message ${isOurMessage ? 'outgoing' : 'incoming'}`;
+        
+        msgDiv.innerHTML = `
+          <span class="username">${escapeHTML(data.username)}</span>
+          <div>${escapeHTML(data.message)}</div>
+        `;
+        
+        messagesBox.appendChild(msgDiv);
+        messagesBox.scrollTop = messagesBox.scrollHeight;
+      }, (error) => {
+        showDiagnosticError(`Read Connection Blocked: ${error.message}`);
       });
 
-      messageInput.value = "";
+    } catch (initError) {
+      showDiagnosticError(`Initialization Crash: ${initError.message}`);
     }
-
-    sendBtn.addEventListener('click', handleTransmission);
-    messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleTransmission(); });
-
-    // Stream Incoming Data Logs
-    messagesRef.on('child_added', (snapshot) => {
-      const data = snapshot.val();
-      const msgDiv = document.createElement('div');
-      
-      const isOurMessage = data.username === anonymousUser;
-      msgDiv.className = `message ${isOurMessage ? 'outgoing' : 'incoming'}`;
-      
-      msgDiv.innerHTML = `
-        <span class="username">${escapeHTML(data.username)}</span>
-        <div>${escapeHTML(data.message)}</div>
-      `;
-      
-      messagesBox.appendChild(msgDiv);
-      messagesBox.scrollTop = messagesBox.scrollHeight;
-    });
 
     function escapeHTML(str) {
       return str.replace(/[&<>'"]/g, 
