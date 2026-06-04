@@ -246,12 +246,9 @@
     </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-    // Replaced placeholders intended for GitHub Actions runner token insertion
-    const firebaseConfig = {
+  <script>
+    // 1. Production Injection Placeholders (For GitHub Deployment Engine)
+    const secretConfig = {
       apiKey: "__FIREBASE_API_KEY__",
       authDomain: "__FIREBASE_AUTH_DOMAIN__",
       databaseURL: "__FIREBASE_DATABASE_URL__",
@@ -262,16 +259,27 @@
       measurementId: "__FIREBASE_MEASUREMENT_ID__"
     };
 
-    // Fail-safe validation for configuration variables
-    if (firebaseConfig.apiKey.includes("FIREBASE_API_KEY")) {
-      console.warn("Firebase parameters missing initialization tokens.");
-    }
+    // 2. Direct Fallback Configuration (Used instantly during active local/preview testing)
+    const localConfig = {
+      apiKey: "AIzaSyBc7te9teUuhfI7fI9AbGjEPbR8r43HIQ0",
+      authDomain: "celestial-tracking.firebaseapp.com",
+      databaseURL: "https://celestial-tracking-default-rtdb.firebaseio.com",
+      projectId: "celestial-tracking",
+      storageBucket: "celestial-tracking.firebasestorage.app",
+      messagingSenderId: "941871549853",
+      appId: "1:941871549853:web:6ff1e7e0ac0f3c4201f374",
+      measurementId: "G-5W556CWNZ5"
+    };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const messagesRef = ref(db, 'community_chat');
+    // Determine if the environment has processed Github Actions replacements yet
+    const isDeployed = !secretConfig.apiKey.includes("__FIREBASE_");
+    const firebaseConfig = isDeployed ? secretConfig : localConfig;
 
-    // Create a simple identity value for identification without registration constraints
+    // Initialize Connection Framework
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const messagesRef = db.ref('community_chat');
+
     let anonymousUser = localStorage.getItem('chat_username');
     if (!anonymousUser) {
       anonymousUser = "Observer-" + Math.floor(1000 + Math.random() * 9000);
@@ -282,15 +290,18 @@
     const messageInput = document.getElementById('messageInput');
     const sendBtn = document.getElementById('sendBtn');
 
-    // Transmit new entries
     function handleTransmission() {
       const text = messageInput.value.trim();
       if (!text) return;
 
-      push(messagesRef, {
+      messagesRef.push({
         username: anonymousUser,
         message: text,
-        timestamp: serverTimestamp()
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      }).then(() => {
+        console.log("Transmission delivered successfully.");
+      }).catch((error) => {
+        console.error("Transmission fault:", error);
       });
 
       messageInput.value = "";
@@ -299,8 +310,8 @@
     sendBtn.addEventListener('click', handleTransmission);
     messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleTransmission(); });
 
-    // Stream incoming messages directly to the UI
-    onChildAdded(messagesRef, (snapshot) => {
+    // Stream Incoming Data Logs
+    messagesRef.on('child_added', (snapshot) => {
       const data = snapshot.val();
       const msgDiv = document.createElement('div');
       
