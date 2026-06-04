@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Perseid Meteor Shower Countdown</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #0f2a4a;
+      --secondary: #1d4ed8;
+      --accent: #f59e0b;
+      --bg: #f0f4f8;
+      --card-bg: #ffffff;
+      --text-main: #0b1523;
+      --text-muted: #627183;
+      --shadow: rgba(15, 42, 74, 0.05);
+      --nav-bg: #07111e;
+    }
+
+    body {
+      margin: 0;
+      padding: 0 0 60px 0;
+      font-family: "Plus Jakarta Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- Fixed Navigation Bar ---- */
+    .navbar {
+      width: 100%;
+      background: var(--nav-bg);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .nav-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 70px;
+    }
+
+    .nav-logo {
+      font-family: "Playfair Display", serif;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 1.35em;
+      text-decoration: none;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 12px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .nav-links a {
+      color: #93a5bc;
+      text-decoration: none;
+      font-size: 0.85em;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 24px;
+      transition: all 0.25s ease;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      background: transparent;
+    }
+
+    .nav-links a:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-links a.active {
+      background: linear-gradient(135deg, var(--secondary), var(--accent));
+      color: #ffffff !important;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+    }
+
+    /* ---- Main Content Layout ---- */
+    .container {
+      width: 90%;
+      max-width: 720px;
+      margin-top: 50px;
+    }
+
+    .main-title {
+      font-family: "Playfair Display", serif;
+      font-size: 2.8em;
+      font-weight: 700;
+      text-align: center;
+      margin: 0 0 40px 0;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .card {
+      background: var(--card-bg);
+      padding: 35px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px var(--shadow);
+      margin-bottom: 30px;
+      border: 1px solid rgba(15, 42, 74, 0.03);
+      box-sizing: border-box;
+    }
+
+    .card-title {
+      font-size: 1.25em;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 0 0 25px 0;
+      text-align: center;
+    }
+
+    /* ---- Countdown Grid ---- */
+    .countdown-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .time-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 18px 8px;
+      text-align: center;
+    }
+
+    .time-box span {
+      display: block;
+      font-size: 2.6em;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+
+    .time-box small {
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.75em;
+      letter-spacing: 1px;
+    }
+
+    #message {
+      text-align: center;
+      margin: 20px 0 0 0;
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 1em;
+    }
+
+    /* ---- Solar/Celestial Meter ---- */
+    .meter-bar {
+      background: #e2e8f0;
+      border-radius: 12px;
+      height: 20px;
+      width: 100%;
+      overflow: hidden;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .meter-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--secondary) 0%, var(--accent) 100%);
+      border-radius: 12px;
+      transition: width 0.5s ease-out;
+    }
+
+    .meter-status-container {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    #energyPercent {
+      font-size: 1.2em;
+      font-weight: 700;
+      color: var(--text-main);
+      margin: 0 0 4px 0;
+    }
+
+    #showerIntensity {
+      font-size: 0.95em;
+      color: var(--secondary);
+      margin: 0;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ---- Experience Log ---- */
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      resize: vertical;
+      font-family: inherit;
+      font-size: 0.95em;
+      background: #f8fafc;
+      transition: all 0.2s;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--secondary);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.1);
+    }
+
+    button {
+      display: inline-block;
+      padding: 12px 28px;
+      margin-top: 16px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9em;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 12px rgba(15, 42, 74, 0.15);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(15, 42, 74, 0.25);
+    }
+
+    ul {
+      padding: 0;
+      margin: 24px 0 0 0;
+      list-style: none;
+    }
+
+    ul li {
+      margin-bottom: 10px;
+      padding: 14px 18px;
+      background: #f8fafc;
+      border-radius: 10px;
+      border-left: 4px solid var(--accent);
+      font-size: 0.95em;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+
+    @media (max-width: 768px) {
+      .nav-container { flex-direction: column; height: auto; padding: 16px; gap: 14px; }
+      .nav-links { width: 100%; justify-content: center; flex-wrap: wrap; gap: 6px; }
+      .nav-links a { padding: 8px 14px; font-size: 0.75em; }
+      .container { margin-top: 30px; }
+      .main-title { font-size: 2.1em; }
+      .card { padding: 24px; }
+      .countdown-grid { gap: 10px; }
+      .time-box span { font-size: 1.9em; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="#" class="nav-logo">🌌 Celestial Tracking</a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="active">Solstice</a></li>
+        <li><a href="lunar-eclipse.html">Eclipse</a></li>
+        <li><a href="meteor-shower.html">Meteors</a></li>
+        <li><a href="winter-solstice.html"> Winter</a></li>
+        <li><a href="copyright.html">Copyright</a></li>
+        <li><a href="chat.html">Chat</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1 class="main-title">Perseid Meteor Shower</h1>
+
+    <div class="card">
+      <div class="card-title">Countdown to Peak Activity</div>
+      <div class="countdown-grid">
+        <div class="time-box"><span id="days">0</span><small>Days</small></div>
+        <div class="time-box"><span id="hours">0</span><small>Hours</small></div>
+        <div class="time-box"><span id="minutes">0</span><small>Min</small></div>
+        <div class="time-box"><span id="seconds">0</span><small>Sec</small></div>
+      </div>
+      <p id="message"></p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Debris Stream Proximity Meter</div>
+      <div class="meter-bar"><div id="energyBar" class="meter-fill"></div></div>
+      <div class="meter-status-container">
+        <p id="energyPercent">–</p>
+        <p id="showerIntensity">–</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Observation Log</div>
+      <textarea id="shiftEntry" rows="3" placeholder="Log your shooting star tallies and radiant observations..."></textarea>
+      <button id="saveShift">Save Entry</button>
+      <ul id="shiftList"></ul>
+    </div>
+  </div>
+
+  <script>
+    const targetDate = new Date("August 12, 2026 23:00:00").getTime();
+    const startDate = new Date("June 21, 2026 19:00:00").getTime(); // Starts building after Summer Solstice
+
+    function updateCountdown() {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      document.getElementById("days").textContent = Math.max(0, days);
+      document.getElementById("hours").textContent = Math.max(0, hours);
+      document.getElementById("minutes").textContent = Math.max(0, minutes);
+      document.getElementById("seconds").textContent = Math.max(0, seconds);
+
+      if (distance < 0) {
+        document.getElementById("message").textContent = "✨ The Perseids are peaking right now! Look up!";
+        clearInterval(countdownInterval);
+      } else {
+        document.getElementById("message").textContent = "";
+      }
+    }
+    const countdownInterval = setInterval(updateCountdown, 1000);
+    updateCountdown();
+
+    function getIntensityLabel(percent) {
+      if (percent >= 100) return "Peak Zenith Hourly Rate (100+ meteors/hr)";
+      else if (percent >= 80) return "High Background Activity Alert";
+      else if (percent >= 50) return "Entering Swift-Tuttle Orbit Path";
+      else return "Early Orbit Background Levels";
+    }
+
+    function updateMeter() {
+      const now = new Date().getTime();
+      const totalDuration = targetDate - startDate;
+      const elapsed = now - startDate;
+
+      let percent = (elapsed / totalDuration) * 100;
+      percent = Math.max(0, Math.min(100, percent));
+
+      const bar = document.getElementById("energyBar");
+      const text = document.getElementById("energyPercent");
+      const label = document.getElementById("showerIntensity");
+      
+      const rounded = percent.toFixed(2);
+      bar.style.width = rounded + "%";
+      text.textContent = `${rounded}% orbital progression into the debris core`;
+      label.textContent = getIntensityLabel(percent);
+    }
+
+    updateMeter();
+    setInterval(updateMeter, 60000);
+
+    function loadShifts() {
+      const data = JSON.parse(localStorage.getItem("meteorLogs") || "[]");
+      const list = document.getElementById("shiftList");
+      list.innerHTML = "";
+      data.forEach((txt) => {
+        const li = document.createElement("li");
+        li.textContent = "✨ " + txt;
+        list.appendChild(li);
+      });
+    }
+
+    document.getElementById("saveShift").addEventListener("click", () => {
+      const entry = document.getElementById("shiftEntry").value.trim();
+      if (!entry) return;
+      const data = JSON.parse(localStorage.getItem("meteorLogs") || "[]");
+      data.unshift(entry);
+      localStorage.setItem("meteorLogs", JSON.stringify(data.slice(0, 20)));
+      document.getElementById("shiftEntry").value = "";
+      loadShifts();
+    });
+
+    loadShifts();
+  </script>
+</body>
+</html>
+© Copyright 2026 Celestial Tracking Inc. All Rights Reserved.

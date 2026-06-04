@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Celestial Tracking - Community Chat</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #4a148c;
+      --secondary: #7b2cbf;
+      --accent: #ff006e;
+      --bg: #f3f0f7;
+      --card-bg: #ffffff;
+      --text-main: #1a0933;
+      --text-muted: #6c757d;
+      --shadow: rgba(74, 20, 140, 0.06);
+      --nav-bg: #0f051d;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Plus Jakarta Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- Fixed Navigation Bar ---- */
+    .navbar {
+      width: 100%;
+      background: var(--nav-bg);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .nav-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 70px;
+    }
+
+    .nav-logo {
+      font-family: "Playfair Display", serif;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 1.35em;
+      text-decoration: none;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 12px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .nav-links a {
+      color: #bfaecf;
+      text-decoration: none;
+      font-size: 0.85em;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 24px;
+      transition: all 0.25s ease;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    /* ---- Chat Layout ---- */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 800px;
+      width: 90%;
+      margin: 30px auto;
+      background: var(--card-bg);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px var(--shadow);
+      border: 1px solid rgba(74, 20, 140, 0.03);
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 20px 24px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff;
+    }
+
+    .chat-header h1 {
+      margin: 0;
+      font-family: "Playfair Display", serif;
+      font-size: 1.5em;
+    }
+
+    .chat-header p {
+      margin: 4px 0 0 0;
+      font-size: 0.85em;
+      opacity: 0.8;
+    }
+
+    .messages-box {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: #faf9fc;
+    }
+
+    .message {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 0.95em;
+      line-height: 1.4;
+      position: relative;
+    }
+
+    .message.incoming {
+      background: #ffffff;
+      color: var(--text-main);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+      border: 1px solid #eee1f5;
+    }
+
+    .message.outgoing {
+      background: linear-gradient(135deg, var(--secondary), var(--primary));
+      color: #ffffff;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message .username {
+      font-size: 0.75em;
+      font-weight: 700;
+      display: block;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .message.incoming .username { color: var(--secondary); }
+    .message.outgoing .username { color: #e1dbec; }
+
+    /* ---- Input Bar ---- */
+    .input-area {
+      padding: 20px;
+      background: var(--card-bg);
+      border-top: 1px solid #f1ecf7;
+      display: flex;
+      gap: 12px;
+    }
+
+    .input-area input {
+      flex: 1;
+      padding: 14px 20px;
+      border-radius: 12px;
+      border: 1px solid #e1dbec;
+      font-family: inherit;
+      font-size: 0.95em;
+      background: #faf9fc;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .input-area input:focus {
+      border-color: var(--secondary);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(123, 44, 191, 0.1);
+    }
+
+    .input-area button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .input-area button:hover {
+      transform: translateY(-1px);
+    }
+
+    @media (max-width: 768px) {
+      .nav-container { flex-direction: column; height: auto; padding: 16px; gap: 14px; }
+      .nav-links { width: 100%; justify-content: center; flex-wrap: wrap; gap: 6px; }
+      .chat-container { margin: 10px auto; width: 95%; height: calc(100vh - 140px); }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="#" class="nav-logo">🌌 Celestial Tracking</a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="active">Solstice</a></li>
+        <li><a href="lunar-eclipse.html">Eclipse</a></li>
+        <li><a href="meteor-shower.html">Meteors</a></li>
+        <li><a href="winter-solstice.html"> Winter</a></li>
+        <li><a href="copyright.html">Copyright</a></li>
+        <li><a href="chat.html">Chat</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="chat-container">
+    <div class="chat-header">
+      <h1>Stargazer Transit Lounge</h1>
+      <p>Live global communication stream for real-time observation notes</p>
+    </div>
+    
+    <div class="messages-box" id="messagesBox">
+      </div>
+
+    <div class="input-area">
+      <input type="text" id="messageInput" placeholder="Share an observation or coordinates..." maxlength="400">
+      <button id="sendBtn">Transmit</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // Replaced placeholders intended for GitHub Actions runner token insertion
+    const firebaseConfig = {
+      apiKey: "__FIREBASE_API_KEY__",
+      authDomain: "__FIREBASE_AUTH_DOMAIN__",
+      databaseURL: "__FIREBASE_DATABASE_URL__",
+      projectId: "__FIREBASE_PROJECT_ID__",
+      storageBucket: "__FIREBASE_STORAGE_BUCKET__",
+      messagingSenderId: "__FIREBASE_MESSAGING_SENDER_ID__",
+      appId: "__FIREBASE_APP_ID__",
+      measurementId: "__FIREBASE_MEASUREMENT_ID__"
+    };
+
+    // Fail-safe validation for configuration variables
+    if (firebaseConfig.apiKey.includes("FIREBASE_API_KEY")) {
+      console.warn("Firebase parameters missing initialization tokens.");
+    }
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const messagesRef = ref(db, 'community_chat');
+
+    // Create a simple identity value for identification without registration constraints
+    let anonymousUser = localStorage.getItem('chat_username');
+    if (!anonymousUser) {
+      anonymousUser = "Observer-" + Math.floor(1000 + Math.random() * 9000);
+      localStorage.setItem('chat_username', anonymousUser);
+    }
+
+    const messagesBox = document.getElementById('messagesBox');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    // Transmit new entries
+    function handleTransmission() {
+      const text = messageInput.value.trim();
+      if (!text) return;
+
+      push(messagesRef, {
+        username: anonymousUser,
+        message: text,
+        timestamp: serverTimestamp()
+      });
+
+      messageInput.value = "";
+    }
+
+    sendBtn.addEventListener('click', handleTransmission);
+    messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleTransmission(); });
+
+    // Stream incoming messages directly to the UI
+    onChildAdded(messagesRef, (snapshot) => {
+      const data = snapshot.val();
+      const msgDiv = document.createElement('div');
+      
+      const isOurMessage = data.username === anonymousUser;
+      msgDiv.className = `message ${isOurMessage ? 'outgoing' : 'incoming'}`;
+      
+      msgDiv.innerHTML = `
+        <span class="username">${escapeHTML(data.username)}</span>
+        <div>${escapeHTML(data.message)}</div>
+      `;
+      
+      messagesBox.appendChild(msgDiv);
+      messagesBox.scrollTop = messagesBox.scrollHeight;
+    });
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
+    }
+  </script>
+</body>
+</html>
