@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Celestial Tracking - Community Chat</title>
@@ -32,7 +30,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ---- Fixed Navigation Bar ---- */
     .navbar {
       width: 100%;
       background: var(--nav-bg);
@@ -58,7 +55,6 @@
       font-weight: 700;
       font-size: 1.35em;
       text-decoration: none;
-      letter-spacing: -0.5px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -80,16 +76,14 @@
       padding: 10px 18px;
       border-radius: 24px;
       transition: all 0.25s ease;
-      letter-spacing: 0.5px;
       text-transform: uppercase;
     }
 
-    .nav-links a:hover, .nav-links a.active {
+    .nav-links a:hover {
       color: #ffffff;
       background: rgba(255, 255, 255, 0.08);
     }
 
-    /* ---- Chat Layout ---- */
     .chat-container {
       flex: 1;
       display: flex;
@@ -138,7 +132,6 @@
       border-radius: 16px;
       font-size: 0.95em;
       line-height: 1.4;
-      position: relative;
     }
 
     .message.incoming {
@@ -162,13 +155,11 @@
       display: block;
       margin-bottom: 4px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
     .message.incoming .username { color: var(--secondary); }
     .message.outgoing .username { color: #e1dbec; }
 
-    /* ---- Input Bar ---- */
     .input-area {
       padding: 20px;
       background: var(--card-bg);
@@ -182,17 +173,9 @@
       padding: 14px 20px;
       border-radius: 12px;
       border: 1px solid #e1dbec;
-      font-family: inherit;
       font-size: 0.95em;
       background: #faf9fc;
       outline: none;
-      transition: all 0.2s;
-    }
-
-    .input-area input:focus {
-      border-color: var(--secondary);
-      background: #fff;
-      box-shadow: 0 0 0 4px rgba(123, 44, 191, 0.1);
     }
 
     .input-area button {
@@ -203,11 +186,6 @@
       color: #fff;
       font-weight: 600;
       cursor: pointer;
-      transition: transform 0.2s;
-    }
-
-    .input-area button:hover {
-      transform: translateY(-1px);
     }
 
     @media (max-width: 768px) {
@@ -216,6 +194,9 @@
       .chat-container { margin: 10px auto; width: 95%; height: calc(100vh - 140px); }
     }
   </style>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -223,12 +204,10 @@
     <div class="nav-container">
       <a href="#" class="nav-logo">🌌 Celestial Tracking</a>
       <ul class="nav-links">
-        <li><a href="index.html" class="active">Solstice</a></li>
+        <li><a href="index.html">Solstice</a></li>
         <li><a href="lunar-eclipse.html">Eclipse</a></li>
         <li><a href="meteor-shower.html">Meteors</a></li>
-        <li><a href="winter-solstice.html"> Winter</a></li>
-        <li><a href="copyright.html">Copyright</a></li>
-        <li><a href="chat.html">Chat</a></li>
+        <li><a href="winter-solstice.html">Winter</a></li>
       </ul>
     </div>
   </nav>
@@ -239,11 +218,10 @@
       <p>Live global communication stream for real-time observation notes</p>
     </div>
     
-    <div class="messages-box" id="messagesBox">
-      </div>
+    <div class="messages-box" id="messagesBox"></div>
 
     <div class="input-area">
-      <input type="text" id="messageInput" placeholder="Share an observation or coordinates..." maxlength="400">
+      <input type="text" id="messageInput" placeholder="Share an observation..." maxlength="400">
       <button id="sendBtn">Transmit</button>
     </div>
   </div>
@@ -276,93 +254,86 @@
     const isDeployed = !secretConfig.apiKey.includes("__FIREBASE_");
     const firebaseConfig = isDeployed ? secretConfig : localConfig;
 
-    // Diagnostic helper to print errors right on the screen
-    function showDiagnosticError(errMessage, type = "error") {
+    function showStatus(errMessage, type = "error") {
       const header = document.querySelector('.chat-header');
       let statusDiv = document.getElementById('diagnostic-status');
       if (!statusDiv) {
         statusDiv = document.createElement('p');
         statusDiv.id = 'diagnostic-status';
-        statusDiv.style.marginTop = '8px';
-        statusDiv.style.padding = '8px';
-        statusDiv.style.borderRadius = '6px';
-        statusDiv.style.fontSize = '0.85em';
-        statusDiv.style.fontWeight = 'bold';
+        statusDiv.style.cssText = 'margin-top:8px; padding:8px; border-radius:6px; font-size:0.85em; font-weight:bold;';
         header.appendChild(statusDiv);
       }
-      statusDiv.textContent = `⚠️ System Status: ${errMessage}`;
-      statusDiv.style.background = type === "error" ? "#ff006e" : "#4caf50";
+      statusDiv.textContent = `⚠️ System: ${errMessage}`;
+      statusDiv.style.background = type === "error" ? "#ff006e" : (type === "success" ? "#4caf50" : "#7b2cbf");
       statusDiv.style.color = "#fff";
     }
 
-    try {
-      firebase.initializeApp(firebaseConfig);
-      const db = firebase.database();
-      const messagesRef = db.ref('community_chat');
-
-      let anonymousUser = localStorage.getItem('chat_username');
-      if (!anonymousUser) {
-        anonymousUser = "Observer-" + Math.floor(1000 + Math.random() * 9000);
-        localStorage.setItem('chat_username', anonymousUser);
+    // Wrap initialization to completely catch script loading issues
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof firebase === 'undefined') {
+        showStatus("Initialization Crash: Firebase libraries blocked. Check your adblocker or internet connection.");
+        return;
       }
 
-      const messagesBox = document.getElementById('messagesBox');
-      const messageInput = document.getElementById('messageInput');
-      const sendBtn = document.getElementById('sendBtn');
+      try {
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const messagesRef = db.ref('community_chat');
 
-      function handleTransmission() {
-        const text = messageInput.value.trim();
-        if (!text) return;
+        let anonymousUser = localStorage.getItem('chat_username');
+        if (!anonymousUser) {
+          anonymousUser = "Observer-" + Math.floor(1000 + Math.random() * 9000);
+          localStorage.setItem('chat_username', anonymousUser);
+        }
 
-        showDiagnosticError("Attempting data transmission...", "info");
+        const messagesBox = document.getElementById('messagesBox');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
 
-        messagesRef.push({
-          username: anonymousUser,
-          message: text,
-          timestamp: firebase.database.ServerValue.TIMESTAMP
-        }).then(() => {
-          showDiagnosticError("Transmission successful!", "success");
-          setTimeout(() => {
-            const statusDiv = document.getElementById('diagnostic-status');
-            if(statusDiv) statusDiv.remove();
-          }, 3000);
-        }).catch((error) => {
-          // This will capture things like PERMISSION_DENIED
-          showDiagnosticError(`Database Rejected: ${error.message}`);
+        function handleTransmission() {
+          const text = messageInput.value.trim();
+          if (!text) return;
+
+          showStatus("Transmitting data stream...", "info");
+
+          messagesRef.push({
+            username: anonymousUser,
+            message: text,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+          }).then(() => {
+            showStatus("Transmission delivered successfully!", "success");
+            setTimeout(() => { document.getElementById('diagnostic-status')?.remove(); }, 2000);
+          }).catch((error) => {
+            showStatus(`Database Refused Write: ${error.message}`);
+          });
+
+          messageInput.value = "";
+        }
+
+        sendBtn.addEventListener('click', handleTransmission);
+        messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleTransmission(); });
+
+        messagesRef.on('child_added', (snapshot) => {
+          const data = snapshot.val();
+          const msgDiv = document.createElement('div');
+          const isOurMessage = data.username === anonymousUser;
+          
+          msgDiv.className = `message ${isOurMessage ? 'outgoing' : 'incoming'}`;
+          msgDiv.innerHTML = `<span class="username">${escapeHTML(data.username)}</span><div>${escapeHTML(data.message)}</div>`;
+          
+          messagesBox.appendChild(msgDiv);
+          messagesBox.scrollTop = messagesBox.scrollHeight;
+        }, (error) => {
+          showStatus(`Database Refused Read: ${error.message}`);
         });
 
-        messageInput.value = "";
+      } catch (initError) {
+        showStatus(`Runtime Failure: ${initError.message}`);
       }
-
-      sendBtn.addEventListener('click', handleTransmission);
-      messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleTransmission(); });
-
-      messagesRef.on('child_added', (snapshot) => {
-        const data = snapshot.val();
-        const msgDiv = document.createElement('div');
-        
-        const isOurMessage = data.username === anonymousUser;
-        msgDiv.className = `message ${isOurMessage ? 'outgoing' : 'incoming'}`;
-        
-        msgDiv.innerHTML = `
-          <span class="username">${escapeHTML(data.username)}</span>
-          <div>${escapeHTML(data.message)}</div>
-        `;
-        
-        messagesBox.appendChild(msgDiv);
-        messagesBox.scrollTop = messagesBox.scrollHeight;
-      }, (error) => {
-        showDiagnosticError(`Read Connection Blocked: ${error.message}`);
-      });
-
-    } catch (initError) {
-      showDiagnosticError(`Initialization Crash: ${initError.message}`);
-    }
+    });
 
     function escapeHTML(str) {
-      return str.replace(/[&<>'"]/g, 
-        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-      );
+      return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t));
     }
   </script>
 </body>
