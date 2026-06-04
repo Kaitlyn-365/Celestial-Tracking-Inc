@@ -28,8 +28,10 @@
       flex-direction: column;
       height: 100vh;
       -webkit-font-smoothing: antialiased;
+      overflow: hidden;
     }
 
+    /* ---- Fixed Navigation Bar ---- */
     .navbar {
       width: 100%;
       background: var(--nav-bg);
@@ -84,6 +86,106 @@
       background: rgba(255, 255, 255, 0.08);
     }
 
+    /* ---- Authentication Overlay ---- */
+    .login-overlay {
+      position: fixed;
+      top: 70px; /* Offset navigation bar */
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+      transition: opacity 0.4s ease, visibility 0.4s;
+    }
+
+    .login-card {
+      background: var(--card-bg);
+      padding: 40px;
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(74, 20, 140, 0.12);
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      border: 1px solid rgba(74, 20, 140, 0.05);
+    }
+
+    .login-card h2 {
+      margin: 0 0 10px 0;
+      font-family: "Playfair Display", serif;
+      color: var(--primary);
+      font-size: 1.8em;
+    }
+
+    .login-card p {
+      margin: 0 0 24px 0;
+      color: var(--text-muted);
+      font-size: 0.9em;
+    }
+
+    .form-group {
+      text-align: left;
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--secondary);
+      margin-bottom: 8px;
+    }
+
+    .form-group input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 1px solid #e1dbec;
+      font-family: inherit;
+      font-size: 0.95em;
+      background: #faf9fc;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .form-group input:focus {
+      border-color: var(--secondary);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(123, 44, 191, 0.1);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff;
+      font-weight: 600;
+      font-size: 1em;
+      cursor: pointer;
+      transition: transform 0.2s;
+      margin-top: 10px;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    #login-error-msg {
+      color: var(--accent);
+      font-size: 0.85em;
+      font-weight: 600;
+      margin-top: 14px;
+      min-height: 20px;
+    }
+
+    /* ---- Chat Layout ---- */
     .chat-container {
       flex: 1;
       display: flex;
@@ -96,6 +198,9 @@
       box-shadow: 0 10px 30px var(--shadow);
       border: 1px solid rgba(74, 20, 140, 0.03);
       overflow: hidden;
+      visibility: hidden; /* Kept hidden until login clears */
+      opacity: 0;
+      transition: opacity 0.4s ease;
     }
 
     .chat-header {
@@ -192,6 +297,7 @@
       .nav-container { flex-direction: column; height: auto; padding: 16px; gap: 14px; }
       .nav-links { width: 100%; justify-content: center; flex-wrap: wrap; gap: 6px; }
       .chat-container { margin: 10px auto; width: 95%; height: calc(100vh - 140px); }
+      .login-overlay { top: 120px; }
     }
   </style>
 
@@ -212,7 +318,27 @@
     </div>
   </nav>
 
-  <div class="chat-container">
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card">
+      <h2>Transit Terminal</h2>
+      <p>Initialize encryption keys to clear validation checkpoints.</p>
+      
+      <div class="form-group">
+        <label for="usernameInput">Observer Handle</label>
+        <input type="text" id="usernameInput" placeholder="e.g., Star Gazer 42" maxlength="20">
+      </div>
+      
+      <div class="form-group">
+        <label for="pinInput">4-Digit Security PIN</label>
+        <input type="password" id="pinInput" placeholder="••••" pattern="[0-9]*" inputmode="numeric" maxlength="4">
+      </div>
+      
+      <button class="login-btn" id="loginSubmitBtn">Establish Link</button>
+      <div id="login-error-msg"></div>
+    </div>
+  </div>
+
+  <div class="chat-container" id="chatWindow">
     <div class="chat-header">
       <h1>Stargazer Transit Lounge</h1>
       <p>Live global communication stream for real-time observation notes</p>
@@ -227,7 +353,7 @@
   </div>
 
   <script>
-    // 1. Production Injection Placeholders
+    // 1. Secrets Variable Mappings
     const secretConfig = {
       apiKey: "__FIREBASE_API_KEY__",
       authDomain: "__FIREBASE_AUTH_DOMAIN__",
@@ -268,41 +394,78 @@
       statusDiv.style.color = "#fff";
     }
 
-    // Wrap initialization to completely catch script loading issues
     window.addEventListener('DOMContentLoaded', () => {
       if (typeof firebase === 'undefined') {
-        showStatus("Initialization Crash: Firebase libraries blocked. Check your adblocker or internet connection.");
+        alert("Firebase components completely blocked by network configurations.");
         return;
       }
 
-      try {
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const messagesRef = db.ref('community_chat');
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+      const messagesRef = db.ref('community_chat');
 
-        let anonymousUser = localStorage.getItem('chat_username');
-        if (!anonymousUser) {
-          anonymousUser = "Observer-" + Math.floor(1000 + Math.random() * 9000);
-          localStorage.setItem('chat_username', anonymousUser);
+      // Access elements
+      const loginOverlay = document.getElementById('loginOverlay');
+      const chatWindow = document.getElementById('chatWindow');
+      const usernameInput = document.getElementById('usernameInput');
+      const pinInput = document.getElementById('pinInput');
+      const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+      const errorMsg = document.getElementById('login-error-msg');
+
+      const messagesBox = document.getElementById('messagesBox');
+      const messageInput = document.getElementById('messageInput');
+      const sendBtn = document.getElementById('sendBtn');
+
+      let activeSessionUser = sessionStorage.getItem('chat_active_user');
+
+      // Skip access validation frame if data remains in volatile temporary session memory
+      if (activeSessionUser) {
+        revealChatFrame(activeSessionUser);
+      }
+
+      loginSubmitBtn.addEventListener('click', processValidationGate);
+      pinInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') processValidationGate(); });
+
+      function processValidationGate() {
+        const handle = usernameInput.value.trim();
+        const pinCode = pinInput.value.trim();
+
+        if (handle.length < 3) {
+          errorMsg.textContent = "Observer handle must be at least 3 characters.";
+          return;
+        }
+        if (!/^\d{4}$/.test(pinCode)) {
+          errorMsg.textContent = "Security validation key requires a strict 4-digit PIN.";
+          return;
         }
 
-        const messagesBox = document.getElementById('messagesBox');
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
+        errorMsg.textContent = "";
+        
+        // Save state variables safely to transient tab cache memory
+        sessionStorage.setItem('chat_active_user', handle);
+        revealChatFrame(handle);
+      }
 
+      function revealChatFrame(username) {
+        activeSessionUser = username;
+        loginOverlay.style.opacity = '0';
+        loginOverlay.style.visibility = 'hidden';
+        chatWindow.style.visibility = 'visible';
+        chatWindow.style.opacity = '1';
+
+        // Connect the active downstream realtime database synchronization
+        initializeRealtimeStreaming();
+      }
+
+      function initializeRealtimeStreaming() {
         function handleTransmission() {
           const text = messageInput.value.trim();
           if (!text) return;
 
-          showStatus("Transmitting data stream...", "info");
-
           messagesRef.push({
-            username: anonymousUser,
+            username: activeSessionUser,
             message: text,
             timestamp: firebase.database.ServerValue.TIMESTAMP
-          }).then(() => {
-            showStatus("Transmission delivered successfully!", "success");
-            setTimeout(() => { document.getElementById('diagnostic-status')?.remove(); }, 2000);
           }).catch((error) => {
             showStatus(`Database Refused Write: ${error.message}`);
           });
@@ -310,13 +473,15 @@
           messageInput.value = "";
         }
 
-        sendBtn.addEventListener('click', handleTransmission);
-        messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleTransmission(); });
+        sendBtn.onclick = handleTransmission;
+        messageInput.onkeypress = (e) => { if (e.key === 'Enter') handleTransmission(); };
 
+        // Pull and listen to real-time events incoming
+        messagesRef.off(); // Wipe previous attachments if any
         messagesRef.on('child_added', (snapshot) => {
           const data = snapshot.val();
           const msgDiv = document.createElement('div');
-          const isOurMessage = data.username === anonymousUser;
+          const isOurMessage = data.username === activeSessionUser;
           
           msgDiv.className = `message ${isOurMessage ? 'outgoing' : 'incoming'}`;
           msgDiv.innerHTML = `<span class="username">${escapeHTML(data.username)}</span><div>${escapeHTML(data.message)}</div>`;
@@ -326,9 +491,6 @@
         }, (error) => {
           showStatus(`Database Refused Read: ${error.message}`);
         });
-
-      } catch (initError) {
-        showStatus(`Runtime Failure: ${initError.message}`);
       }
     });
 
